@@ -1,205 +1,101 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import requests
 from bs4 import BeautifulSoup
 import json
+from datetime import datetime
 import time
-import logging
-from typing import List, Dict, Any
 import os
-import random
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class CheeseScraper:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.chrome_options = Options()
-        self.chrome_options.add_argument("--headless")
-        self.chrome_options.add_argument("--no-sandbox")
-        self.chrome_options.add_argument("--disable-dev-shm-usage")
-        # Add user agent to appear more like a real browser
-        self.chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+def scrape_cheese_department():
+    url = "https://shop.kimelo.com/department/cheese/3365"
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
         
-    def setup_driver(self):
-        """Initialize and return the Chrome WebDriver"""
-        return webdriver.Chrome(options=self.chrome_options)
-    
-    def random_sleep(self, min_seconds=2, max_seconds=5):
-        """Sleep for a random amount of time to appear more human-like"""
-        time.sleep(random.uniform(min_seconds, max_seconds))
-    
-    def extract_product_data(self, card) -> Dict[str, Any]:
-        """Extract detailed product information from a product card"""
-        try:
-            # Try different possible selectors for product title
-            name = None
-            for selector in [".product-title", ".product-name", "h3", "h4"]:
-                try:
-                    name_element = card.select_one(selector)
-                    if name_element:
-                        name = name_element.text.strip()
-                        break
-                except:
-                    continue
-            
-            if not name:
-                logger.warning("Could not find product name")
-                return None
-
-            # Try different possible selectors for price
-            price = None
-            for selector in [".product-price", ".price", ".product-price-value"]:
-                try:
-                    price_element = card.select_one(selector)
-                    if price_element:
-                        price = price_element.text.strip()
-                        break
-                except:
-                    continue
-
-            # Extract description if available
-            description = ""
-            for selector in [".product-description", ".description", "p"]:
-                try:
-                    desc_element = card.select_one(selector)
-                    if desc_element:
-                        description = desc_element.text.strip()
-                        break
-                except:
-                    continue
-
-            # Extract image URL
-            image_url = ""
-            try:
-                img_element = card.select_one("img")
-                if img_element:
-                    image_url = img_element.get("src", "")
-                    if not image_url:
-                        image_url = img_element.get("data-src", "")
-            except:
-                pass
-
-            # Extract any available metadata
-            metadata = {}
-            try:
-                # Look for any elements that might contain metadata
-                meta_elements = card.select("[class*='meta'], [class*='info'], [class*='detail']")
-                for element in meta_elements:
-                    key = element.get("class", [""])[0].replace("product-", "")
-                    value = element.text.strip()
-                    if value:  # Only add non-empty metadata
-                        metadata[key] = value
-            except:
-                pass
-
-            return {
-                "name": name,
-                "price": price,
-                "description": description,
-                "image_url": image_url,
-                "metadata": metadata,
-                "source_url": self.base_url,
-                "scraped_at": time.strftime("%Y-%m-%d %H:%M:%S")
-            }
-        except Exception as e:
-            logger.error(f"Error extracting product data: {str(e)}")
-            return None
-
-    def scrape_products(self) -> List[Dict[str, Any]]:
-        """Scrape all cheese products from the website"""
-        driver = self.setup_driver()
-        products = []
+        soup = BeautifulSoup(response.text, 'lxml')
         
-        try:
-            logger.info(f"Starting to scrape products from {self.base_url}")
-            driver.get(self.base_url)
+        # Debug: Print the HTML structure
+        print("HTML Structure:")
+        print(soup.prettify()[:1000])  # Print first 1000 characters to see structure
+        
+        # Find all product cards - try different selectors
+        product_cards = soup.find_all('div', {'class': 'css-0'})
+        print(f"\nFound {len(product_cards)} product cards")
+        
+        cheese_products = []
+        
+        for idx, card in enumerate(product_cards):
+            print(f"\nProcessing card {idx + 1}:")
+            print(card.prettify())  # Print the card's HTML structure
             
-            # Initial wait for page load
-            self.random_sleep(3, 5)
-            
-            # Try different possible selectors for product items
-            product_selectors = [
-                ".product-item",
-                ".product-card",
-                ".item",
-                "[class*='product']",
-                "[class*='item']"
-            ]
-            
-            for selector in product_selectors:
-                try:
-                    # Wait for at least one product to be visible
-                    WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                    )
-                    logger.info(f"Found products using selector: {selector}")
-                    break
-                except TimeoutException:
-                    continue
-            
-            # Scroll a few times to load more content
-            for _ in range(3):
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                self.random_sleep(2, 3)
-            
-            # Get the page source and parse with BeautifulSoup
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
-            
-            # Try to find products with different selectors
-            product_cards = []
-            for selector in product_selectors:
-                cards = soup.select(selector)
-                if cards:
-                    product_cards = cards
-                    logger.info(f"Found {len(cards)} products using selector: {selector}")
-                    break
-            
-            if not product_cards:
-                logger.error("No products found with any selector")
-                return []
-            
-            # Extract data from each product card
-            for card in product_cards:
-                product_data = self.extract_product_data(card)
-                if product_data:
-                    products.append(product_data)
-                    logger.info(f"Successfully extracted data for product: {product_data['name']}")
-            
-            return products
-            
-        except Exception as e:
-            logger.error(f"Error during scraping: {str(e)}")
-            return []
-        finally:
-            driver.quit()
-    
-    def save_to_json(self, products: List[Dict[str, Any]], filename: str = "cheese_products.json"):
-        """Save scraped products to a JSON file"""
-        try:
-            with open(filename, "w", encoding="utf-8") as f:
-                json.dump(products, f, indent=2, ensure_ascii=False)
-            logger.info(f"Successfully saved {len(products)} products to {filename}")
-        except Exception as e:
-            logger.error(f"Error saving to JSON: {str(e)}")
+            try:
+                # Try to find elements with more specific selectors
+                name_elem = card.find('p', {'class': 'chakra-text css-pbtft'})
+                price_elem = card.find('b', {'class': 'chakra-text css-1vhzs63'})
+                price_per_lb_elem = card.find('span', {'class': 'chakra-badge css-ff7g47'})
+                image_elem = card.find('img')
+                link_elem = card.find('a')
+                location = card.find('p', {'class': 'chakra-text css-w6ttxb'})
+                product_data = {
+                    'cheese_type': name_elem.text.strip() if name_elem else 'N/A',
+                    'price': price_elem.text.strip() if price_elem else 'N/A',
+                    'price_per_lb': price_per_lb_elem.text.strip() if price_per_lb_elem else 'N/A',
+                    'image_url': 'https://shop.kimelo.com' + image_elem['src'] if image_elem and 'src' in image_elem.attrs else 'N/A',
+                    'product_url': 'https://shop.kimelo.com' + link_elem['href'] if link_elem and 'href' in link_elem.attrs else 'N/A',
 
-def main():
-    base_url = "https://shop.kimelo.com/department/cheese/3365"
-    scraper = CheeseScraper(base_url)
+                    'location' : location.text.strip() if location else 'N/A'
+                }
+                
+                # print(f"Extracted data: {product_data}")
+                cheese_products.append(product_data)
+                
+            except Exception as e:
+                print(f"Error processing card {idx + 1}: {e}")
+                continue
+        output_data = {
+            'scraped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'total_products': len(cheese_products),
+            'products': cheese_products
+        }
+        
+        with open('cheese_products.json', 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, indent=4, ensure_ascii=False)
+            
+        print(f"\nSuccessfully scraped {len(cheese_products)} products and saved to cheese_products.json")
+        return output_data
+        
+    except requests.RequestException as e:
+        print(f"Error fetching the webpage: {e}")
+        return None
+    except Exception as e:
+        print(f"Error processing the data: {e}")
+        return None
+
+def download_product_images(products_data):
+    if not products_data or 'products' not in products_data:
+        return
     
-    # Create data directory if it doesn't exist
-    os.makedirs("data", exist_ok=True)
+    if not os.path.exists('images'):
+        os.makedirs('images')
     
-    # Scrape products
-    products = scraper.scrape_products()
-    
-    # Save to JSON
-    scraper.save_to_json(products, "data/cheese_products.json")
+    for idx, product in enumerate(products_data['products']):
+        if product['image_url'] != 'N/A':
+            try:
+                response = requests.get(product['image_url'])
+                if response.status_code == 200:
+                    filename = f"images/cheese_{idx + 1}.jpg"
+                    with open(filename, 'wb') as f:
+                        f.write(response.content)
+                    print(f"Downloaded image for product {idx + 1}")
+                    time.sleep(1)  # Be nice to the server
+            except Exception as e:
+                print(f"Error downloading image for product {idx + 1}: {e}")
 
 if __name__ == "__main__":
-    main()
+    products_data = scrape_cheese_department()
+    if products_data:
+        download_product_images(products_data) 
