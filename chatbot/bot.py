@@ -1,9 +1,9 @@
 import sys
 import os
+from chatbot.retriver.data_retriver import VectorStore
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import logging
 from typing import List, Dict, Any, Optional
-from rag.vector_store import VectorStore
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ import time
 project_root = str(Path(__file__).parent.parent)
 sys.path.append(project_root)
 
-from chatbot.rag_chatbot import ChatSession
+from chatbot.bot import ChatSession
 
 # Initialize session state for chat history
 if 'chat_session' not in st.session_state:

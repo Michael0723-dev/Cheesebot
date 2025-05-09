@@ -1,19 +1,15 @@
-[
-    {
-        "type": "function",
-        "function": {
-            "name": "type of question",
-            "description": "This is a function that determines the type of question. If the question includes information about cheese from the perspective of a user who wants to buy cheese, for example, information related to the main ingredients, brand, price, weight, form, shape, and color of the cheese, it outputs 1, otherwise it outputs 0.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "question": {
-                        "type": "number",
-                        "description": "The question to determine the type of"
-                    }
-                },
-                "required": ["question"]
-            }
+[{
+    "type": "function",
+    "function": {
+        "name": "determine_question_type",
+        "description": "The metadata we use include: cheese_type, brand, cheese_form, price_each, price_per_lb, lb_per_each, case, sku, upc, image_url, source_url. If the answer can be answered accurately through a pinecone vector database search that includes metadata filtering related to these values, then 1 must be output. But if the user's question now is one that is difficult to answer accurately with a chatbot using the Pinecone vector database. For example, it may be a greeting that is not related to the exact information about cheese, or it may be a question that is difficult to answer accurately with a semantic search using the vector database, in this case the output has to be 0, e.g. finding most expensive cheese, or the heaviest product. and also, it may be a question about a different field that cannot be considered a question from a user using this chatbot to know about cheese. In this case function output has to be 0, Otherwise output has to be 1 that is answerable.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "is_cheese_question": {"type": "integer"}
+            },
+            "required": ["is_cheese_question"]
         }
-    }
-]
+    },
+    "strict": true
+}]

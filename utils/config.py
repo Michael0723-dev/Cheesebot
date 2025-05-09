@@ -7,8 +7,8 @@ load_dotenv()
 
 class Config:
     # OpenAI Configuration
-    OPENAI_API_KEY = "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"
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
+    OPENAI_API_KEY = os.getenv("GPT_KEY")
 
     # Pinecone Configuration
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -62,9 +62,9 @@ class Config:
             missing["MYSQL_USER"] = "Required for MySQL connection"
         if not cls.MYSQL_PASSWORD:
             missing["MYSQL_PASSWORD"] = "Required for MySQL connection"
-            
+
         return missing
-    
+
     @classmethod
     def get_pinecone_config(cls) -> Dict[str, Any]:
         """Get Pinecone configuration dictionary"""
@@ -75,7 +75,7 @@ class Config:
             "dimension": cls.VECTOR_DIMENSION,
             "metric": cls.VECTOR_METRIC
         }
-    
+
     @classmethod
     def get_rag_config(cls) -> Dict[str, Any]:
         """Get RAG configuration dictionary"""
@@ -83,4 +83,4 @@ class Config:
             "top_k": cls.TOP_K_RESULTS,
             "chunk_size": cls.CHUNK_SIZE,
             "chunk_overlap": cls.CHUNK_OVERLAP
-        } 
+        }
