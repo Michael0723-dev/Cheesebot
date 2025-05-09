@@ -7,8 +7,8 @@ load_dotenv()
 
 class Config:
     # OpenAI Configuration
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4")
-    OPENAI_API_KEY = os.getenv("GPT_KEY")
 
     # Pinecone Configuration
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
