@@ -66,9 +66,14 @@ class DataProcessor:
             # Prepare metadata context
             metadata_context = f"""
             Product Details:
-            - Location: {metadata.get('location', 'Unknown')}
-            - Price: ${metadata.get('price_value', 0):.2f}
+            - cheese type: {metadata.get('cheese_type', 'Unknown')}
+            - cheese form: {metadata.get('cheese_form', 'Unknown')}
+            - sku: {metadata.get('sku', 'Unknown')}
+            - upc: {metadata.get('upc', 'Unknown')}
+            - brand: {metadata.get('brand', 'Unknown')}
+            - Price per one: ${metadata.get('price_each', 0):.2f}
             - Price per lb: ${metadata.get('price_per_lb', 0):.2f}
+            - lb per one: ${metadata.get('lb_per_each', 0):.2f}
             """
 
             # Call OpenAI API
@@ -107,7 +112,7 @@ class DataProcessor:
     def generate_id(self, item: Dict[str, Any]) -> str:
         """Generate a unique ID for a product based on its key attributes"""
         # Combine key attributes to create a unique identifier
-        key_attributes = f"{item.get('name', '')}{item.get('source_url', '')}"
+        key_attributes = f"{item.get('image_url', '')}"
         return hashlib.md5(key_attributes.encode()).hexdigest()
 
     def clean_text(self, text: str) -> str:
@@ -127,12 +132,19 @@ class DataProcessor:
             
             # Create a new dictionary with default values
             processed_item = {
-                'name': '',
                 'description': '',
-                'source_url': '',
                 'image_url': '',
                 'metadata': {
-                    'price_value': 0.0
+                    'cheese_type': '',
+                    'source_url': '',
+                    'brand': '',
+                    'cheese_form': '',
+                    'sku': 0,
+                    'upc': 0,
+                    'price_per_lb': 0.00,
+                    'price_each': 0.00,
+                    'lb_per_each': 0.00,
+                    'case': 'No'
                 }
             }
             
@@ -143,10 +155,10 @@ class DataProcessor:
             
             # Generate unique ID
             processed_item['id'] = self.generate_id(processed_item)
-            
+            print(processed_item['id'])
             # Clean text fields
-            for field in ['name']:
-                processed_item[field] = self.clean_text(processed_item[field])
+            # for field in ['name']:
+            #     processed_item[field] = self.clean_text(processed_item[field])
             
             # Generate smart description
             if processed_item['image_url'] and processed_item['image_url'] != 'N/A':
@@ -221,34 +233,55 @@ def main():
                 if product.get('cheese_type') != 'N/A':  # Skip N/A entries
                     # Extract numerical price per lb value
                     price_per_lb_str = product.get('price_per_lb', '')
-                    price_per_lb_value = 0.0
+                    price_per_lb_value = 0.00
                     if price_per_lb_str != 'N/A':
                         try:
                             # Remove currency symbol and /lb, then convert to float
                             cleaned = ''.join(c for c in price_per_lb_str if c.isdigit() or c == '.')
-                            price_per_lb_value = float(cleaned) if cleaned else 0.0
+                            price_per_lb_value = round(float(cleaned) if cleaned else 0.00, 2)
                         except (ValueError, TypeError):
-                            price_per_lb_value = 0.0
+                            price_per_lb_value = 0.00
 
                     # Extract numerical price value
                     price_str = product.get('price', '')
-                    price_value = 0.0
+                    price_value = 0.00
                     if price_str != 'N/A':
                         try:
                             # Remove currency symbol and convert to float
                             cleaned = ''.join(c for c in price_str if c.isdigit() or c == '.')
-                            price_value = float(cleaned) if cleaned else 0.0
+                            price_value = round(float(cleaned) if cleaned else 0.00, 2)
                         except (ValueError, TypeError):
-                            price_value = 0.0
+                            price_value = 0.00
+
+                    # Extract numerical each count of each case
+                    case_count = 1  # Default value
+                    if 'count' in product and isinstance(product['count'], dict):
+                        if 'case' in product['count'] and isinstance(product['count']['case'], dict):
+                            if 'count' in product['count']['case']:
+                                try:
+                                    count_str = ''.join(c for c in product['count']['case']['count'] if c.isdigit() or c == '.')
+                                    case_count = int(count_str)
+                                except (ValueError, TypeError):
+                                    case_count = 1
+
+                    # Extract numerical each product weight of each
+                    lb_per_each = 0.00
+                    if price_per_lb_value > 0:  # Avoid division by zero
+                        lb_per_each = round(price_value / price_per_lb_value, 2)
 
                     mapped_product = {
-                        'name': product.get('cheese_type', ''),
-                        'source_url': product.get('product_url', ''),
                         'image_url': product.get('image_url', ''),
                         'metadata': {
-                            'location': product.get('location', ''),
+                            'cheese_type': product.get('cheese_type', ''),
+                            'source_url': product.get('product_url', ''),
+                            'brand': product.get('brand', ''),
+                            'cheese_form': product.get('cheese_form', ''),
+                            'sku': int(product.get('sku', 0)),
+                            'upc': int(product.get('upc', 0)),
                             'price_per_lb': price_per_lb_value,
-                            'price_value': price_value
+                            'price_each': price_value,
+                            'lb_per_each': lb_per_each,
+                            'case': case_count if case_count != 1 else 'No'
                         }
                     }
                     mapped_products.append(mapped_product)
@@ -262,7 +295,7 @@ def main():
         processed_data = processor.process_data(mapped_products)
         
         # Save processed data
-        processor.save_processed_data(processed_data, 'data/processed_cheese_products.json')
+        processor.save_processed_data(processed_data, 'data/processed_cheese_products1.json')
     except Exception as e:
         logger.error(f"Error in main: {str(e)}")
         return

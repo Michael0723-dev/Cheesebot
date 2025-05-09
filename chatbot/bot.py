@@ -41,32 +41,47 @@ class ChatSession:
         """
         # Add user question to history
         self.add_to_history("user", user_question)
-
+        context_products = []
         # Refine the question with history
         refined_question = self.refine_query(user_question)
 
         # Retrieve relevant context from vector DB
-        context_products = self.vector_store.query_products(
+        result = self.vector_store.get_relevant_products(
             query=refined_question,
             filter_dict=filter_dict
         )
+        if result.get('response') == "this is not a question about cheese, general question":
+            prompt = (
+                "The user's question now is one that is difficult to answer accurately with a chatbot using the Pinecone vector database. For example, it may be a greeting that is not related to the exact information about cheese, or it may be a question that is difficult to answer accurately with a semantic search using the vector database, such as the most expensive or softest product, or the heaviest product."
+                "Also, it may be a question about a different field that cannot be considered a question from a user using this chatbot to know about cheese. Therefore, you should consider the previous conversation history and give an accurate answer. If it is a content that is connected to a previous conversation, you should consider the context and give an accurate answer."
+                "However, if it is a completely different question, you should not answer."
+                "Think about it again, General questions can be of various types."
+                "-If the question is a question that does not guarantee the accuracy of search using the vector database, such as an exact numeric value or string search. In this case, you should answer it simply and clearly, appropriately to the situation, such as e.g. I am a chatbot using the vector database, so I cannot answer these questions accurately. Please wait for the next version."
+                "-If the question is not a question appropriate for users visiting the cheese sales site, you should not answer it accurately."
+                f"Chat History:\n{self.get_history_str()}\n\n"
+                f"User Question: {user_question}\n\n"
+                "Please answer kindly."
+            )
+        else:
+            # Extract context products from the result
+            context_products = result.get('context', [])
 
-        # Build the RAG prompt
-        context_str = "\n".join([
-            f"Product: {prod.get('name', '')}\nDescription: {prod.get('description', '')}\n"
-            f"Price: ${prod.get('price_value', 0):.2f}\nLocation: {prod.get('location', '')}\n"
-            for prod in context_products
-        ])
-        prompt = (
-            "You are a helpful cheese expert assistant. Use the following product information and the chat history to answer the user's question. "
-            "If the answer is not in the context, say so. Always cite the specific products you reference.\n\n"
-            f"Chat History:\n{self.get_history_str()}\n\n"
-            f"Context:\n{context_str}\n\n"
-            f"User Question: {user_question}\n\n"
-            "Please provide a detailed answer based on the product information above:"
-        )
+            # Build the RAG prompt
+            context_str = "\n".join([
+                f"Description: {prod.get('description', '')}\n"
+                for prod in context_products if isinstance(prod, dict)
+            ])
 
-        # Get answer from GPT
+            prompt = (
+                "You are a helpful cheese expert assistant. Use the following product information and the chat history to answer the user's question. "
+                "If the answer is not in the context, say so. Always cite the specific products you reference.\n\n"
+                f"Chat History:\n{self.get_history_str()}\n\n"
+                f"Context:\n{context_str}\n\n"
+                f"User Question: {user_question}\n\n"
+                "Please provide a detailed answer based on the product information above:"
+            )
+
+
         response = self.vector_store.client.chat.completions.create(
             model=self.vector_store.client.model if hasattr(self.vector_store.client, 'model') else "gpt-4",
             messages=[
@@ -78,7 +93,7 @@ class ChatSession:
         )
         answer = response.choices[0].message.content
 
-        # Add answer to history
+
         self.add_to_history("assistant", answer)
 
         return {
@@ -87,7 +102,7 @@ class ChatSession:
             "history": self.history
         }
 
-# Example usage
+
 if __name__ == "__main__":
     session = ChatSession()
     print("Welcome to the Cheese RAG ChatBot!")

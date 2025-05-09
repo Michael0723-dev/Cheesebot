@@ -59,7 +59,7 @@ class PineconeIngestor:
         try:
             for item in processed_data:
                 # Combine name and description for embedding
-                text_to_embed = f"{item['name']} {item['description']}"
+                text_to_embed = f"{item['description']}"
                 
                 # Generate embedding
                 embedding = self.get_embedding(text_to_embed)
@@ -70,10 +70,8 @@ class PineconeIngestor:
                 # Prepare metadata
                 metadata = {
                     **item['metadata'],
-                    'name': item['name'],
-                    'description': item['description'],
-                    'source_url': item['source_url'],
                     'image_url': item['image_url'],
+                    'description': item['description'],
                     'processed_at': item['processed_at']
                 }
                 
@@ -81,6 +79,7 @@ class PineconeIngestor:
                 self.index.upsert(
                     vectors=[(item['id'], embedding, metadata)]
                 )
+                print(item['id'])
                 logger.info(f"Stored item {item['id']} in Pinecone")
             
             logger.info(f"Successfully ingested {len(processed_data)} items into Pinecone")

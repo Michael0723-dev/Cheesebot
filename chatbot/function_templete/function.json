@@ -1,0 +1,19 @@
+[
+    {
+        "type": "function",
+        "function": {
+            "name": "type of question",
+            "description": "This is a function that determines the type of question. If the question includes information about cheese from the perspective of a user who wants to buy cheese, for example, information related to the main ingredients, brand, price, weight, form, shape, and color of the cheese, it outputs 1, otherwise it outputs 0.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "number",
+                        "description": "The question to determine the type of"
+                    }
+                },
+                "required": ["question"]
+            }
+        }
+    }
+]
