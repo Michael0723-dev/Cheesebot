@@ -1,14 +1,15 @@
 # Cheese Knowledge Chatbot
 
-A RAG-based chatbot that answers questions about cheese products from Kimelo's shop.
+A RAG-based chatbot that answers questions about cheese products using vector search and GPT-4.
 
 ## Features
 
-- Web scraping of cheese product data
 - Vector database storage using Pinecone
 - RAG implementation with OpenAI GPT-4
 - Modern Streamlit frontend with chat UI
-- Context-aware responses with source references
+- Context-aware responses with product details
+- Image display for cheese products
+- Price and product information display
 
 ## Setup
 
@@ -42,60 +43,71 @@ PINECONE_INDEX_NAME=cheese-knowledge
 
 5. Run the Streamlit app:
 ```bash
-streamlit run frontend/app.py
+streamlit run app.py
 ```
 
 ## Project Structure
 
 ```
 project/
-├── scraping/
-│   └── scraper.py          # Web scraping implementation
-├── data_processing/
-│   └── process_data.py     # Data cleaning and processing
-├── ingestion/
-│   └── ingest_to_pinecone.py  # Vector database ingestion
-├── retrieval/
-│   └── retriever.py        # RAG retrieval implementation
+├── app.py                 # Main Streamlit application
 ├── chatbot/
-│   └── rag_chain.py        # RAG chain implementation
-├── frontend/
-│   └── app.py             # Streamlit frontend
+│   ├── bot.py            # Chat session management
+│   └── retriver/         # Vector store implementation
+│       └── data_retriver.py
 ├── utils/
-│   ├── logging.py         # Logging configuration
-│   └── config.py          # Configuration management
-└── requirements.txt       # Project dependencies
+│   └── config.py         # Configuration management
+└── requirements.txt      # Project dependencies
 ```
 
 ## Usage
 
-1. Start the application using `streamlit run frontend/app.py`
+1. Start the application using `streamlit run app.py`
 2. Open your browser to the provided Streamlit URL
 3. Ask questions about cheese products in the chat interface
-4. View the context sources used to generate responses
+4. View product details including:
+   - Product images
+   - Cheese type and brand
+   - Price information
+   - Product descriptions
+   - Source links
 
 ## Features
 
-- Modern, responsive chat UI
+- Modern, responsive chat UI with Streamlit
 - Streaming responses for better UX
-- Context display with source references
+- Product details display with images
 - Clear chat history option
-- Informative sidebar with usage tips
+- Context-aware responses
+- Product source references
+
+## Technical Implementation
+
+- Frontend: Streamlit for the web interface
+- Vector Search: Pinecone for efficient similarity search
+- Language Model: OpenAI GPT-4 for response generation
+- Image Handling: Pillow for image processing
+- Environment Management: python-dotenv for configuration
 
 ## Development
 
-- The frontend is built with Streamlit and custom CSS
-- RAG implementation uses OpenAI's GPT-4 and embeddings
-- Vector storage is handled by Pinecone
-- Web scraping is done with Selenium
+The chatbot uses a hybrid approach:
+1. Vector search to find relevant cheese products
+2. GPT-4 to generate context-aware responses
+3. Streamlit for a modern, interactive UI
+4. Product metadata for detailed information display
 
 ## Deployment
 
-The application is designed to be deployed on Streamlit Cloud:
+The application can be deployed on Streamlit Cloud:
 
 1. Push your code to a GitHub repository
 2. Connect your repository to Streamlit Cloud
-3. Set up the required environment variables in Streamlit Cloud
+3. Set up the required environment variables:
+   - OPENAI_API_KEY
+   - PINECONE_API_KEY
+   - PINECONE_ENVIRONMENT
+   - PINECONE_INDEX_NAME
 4. Deploy the application
 
 ## Contributing

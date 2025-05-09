@@ -24,7 +24,7 @@ class Config:
     VECTOR_METRIC = "cosine"
 
     # RAG Configuration
-    TOP_K_RESULTS = int(os.getenv('TOP_K_RESULTS', '3'))
+    TOP_K_RESULTS = int(os.getenv('TOP_K_RESULTS', '20'))
     CHUNK_SIZE = 1000  # size of text chunks for embedding
     CHUNK_OVERLAP = 200  # overlap between chunks
 
